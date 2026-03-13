@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  color: #0f172a;
+  /* no background here — let each page control its own background */
+}
+
+input, select, button {
+  font: inherit;
+}
+
+#professor-qr-scanner {
+  width: 100%;
+}
+
+#professor-qr-scanner video {
+  width: 100% !important;
+  height: auto !important;
+  border-radius: 12px;
+}
+
+#professor-qr-scanner__scan_region {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#professor-qr-scanner img {
+  margin: 0 auto;
+}
