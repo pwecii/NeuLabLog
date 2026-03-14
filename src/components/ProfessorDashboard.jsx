@@ -368,7 +368,7 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout }) {
 
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#0f2744' }}>My Recent Usage</h3>
+                  <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#0f2744' }}>My Recent Usage</h3>
                   <button onClick={loadMyLogs}
                     style={{
                       background: 'transparent', border: '1px solid #cbd5e1',
@@ -481,7 +481,7 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout }) {
           }}>
             <div style={{ height: '4px', background: '#c9a84c' }} />
             <div style={{ padding: '1.5rem' }}>
-              <h3 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: '700', color: '#0f2744' }}>My QR Login Code</h3>
+              <h3 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '700', color: '#0f2744' }}>My QR Login Code</h3>
               <p style={{ margin: '0 0 1.25rem 0', fontSize: '13px', color: '#64748b' }}>
                 This QR code can be used to log in quickly on the QR scanner.
               </p>
