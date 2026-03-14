@@ -223,7 +223,7 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout }) {
               NEU LabLog
             </div>
             <div style={{ fontSize: '11px', color: '#c9a84c', letterSpacing: '0.5px', marginTop: '2px' }}>
-              Nueva Ecija University · Laboratory Room Usage System
+              New Era University · Laboratory Room Usage System
             </div>
           </div>
         </div>
