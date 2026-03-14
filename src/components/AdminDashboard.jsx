@@ -277,7 +277,7 @@ export default function AdminDashboard({ profile, onLogout }) {
               overflow: 'hidden',
               textOverflow: 'ellipsis',
             }}>
-              New Era University · Laboratory Room Usage System
+              Nueva Ecija University · Laboratory Room Usage System
             </div>
           </div>
         </div>
@@ -341,17 +341,16 @@ export default function AdminDashboard({ profile, onLogout }) {
           <div style={{ marginBottom: '20px' }}>
             <h1 style={{
               fontFamily: "'Kelly Slab', cursive",
-              fontSize: 'clamp(40px, 12vw, 50px)',
+              fontSize: 'clamp(20px, 4vw, 30px)',
               color: '#0f2744',
               textShadow: '0 1px 4px rgba(255,255,255,0.9)',
-              fontWeight: 900,
+              fontWeight: 700,
               lineHeight: 1.2,
             }}>
               Admin Dashboard
             </h1>
-            <p style={{ color: '#0f2744',fontWeight:545, fontSize: '1.15rem', marginTop: '4px', textShadow: '0 1px 5px rgba(255,255,255,0.8)' }}>
-              Welcome back, <strong>{profile.full_name}</strong> ·
-               {formatDateTime(now)}
+            <p style={{ color: '#0f2744', fontSize: '0.85rem', marginTop: '4px', textShadow: '0 1px 3px rgba(255,255,255,0.8)' }}>
+              Welcome back, <strong>{profile.full_name}</strong> · {formatDateTime(now)}
             </p>
           </div>
 
@@ -440,7 +439,7 @@ export default function AdminDashboard({ profile, onLogout }) {
                     </span>
                   </div>
                   {room.occupied ? (
-                    <div style={{ marginTop: '10px', fontWeight:550, fontSize: '0.75rem', color: '#374151', lineHeight: 1.6 }}>
+                    <div style={{ marginTop: '10px', fontSize: '0.75rem', color: '#374151', lineHeight: 1.6 }}>
                       <p><strong>Prof:</strong> {room.professor}</p>
                       <p><strong>Subject:</strong> {room.subject}</p>
                       <p><strong>Until:</strong> {formatDateTime(room.end_time)}</p>
@@ -509,7 +508,7 @@ export default function AdminDashboard({ profile, onLogout }) {
               <h3 style={sectionTitle}>Usage Logs</h3>
 
               {/* Mobile card view */}
-              <div className="sm:hidden" style={{ flexDirection: 'column', gap: '10px' }}>
+              <div className="sm:hidden" style={{ flexDirection: 'column', gap: '10px', maxHeight: '480px', overflowY: 'auto', paddingRight: '2px' }}>
                 {loading ? (
                   <p style={{ fontSize: '0.85rem', color: '#64748b' }}>Loading…</p>
                 ) : logs.length === 0 ? (
@@ -535,10 +534,10 @@ export default function AdminDashboard({ profile, onLogout }) {
               </div>
 
               {/* Desktop table */}
-              <div className="hidden sm:block" style={{ overflowX: 'auto' }}>
+              <div className="hidden sm:block" style={{ overflowX: 'auto', maxHeight: '420px', overflowY: 'auto', borderRadius: '12px', border: '1px solid rgba(15,39,68,0.1)' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                  <thead>
-                    <tr style={{ background: 'rgba(15,39,68,0.06)' }}>
+                  <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                    <tr style={{ background: '#eef1f6' }}>
                       {['Professor', 'Subject', 'Room', 'Start', 'End', 'Actions'].map((h) => (
                         <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: '#0f2744', whiteSpace: 'nowrap', borderBottom: '2px solid rgba(201,168,76,0.4)' }}>{h}</th>
                       ))}
