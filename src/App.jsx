@@ -8,341 +8,208 @@ import QRCode from 'qrcode'
 
 export default function App() {
   const [loading, setLoading] = useState(true)
-  const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
   const [error, setError] = useState('')
-  const [qrProfessorProfile, setQrProfessorProfile] = useState(null)
-
-  const isInitializingRef = useRef(false)
-  const isMountedRef = useRef(true)
+  const [qrProfessorProfile, setQrProfessorProfile] = useState(() => {
+    try {
+      const stored = sessionStorage.getItem('qr_professor_profile')
+      return stored ? JSON.parse(stored) : null
+    } catch { return null }
+  })
 
   const buildOrFetchProfile = async (user) => {
-    console.log('buildOrFetchProfile START', user)
-
-    const email = user?.email || ''
-    const fullName =
-      user?.user_metadata?.full_name ||
-      user?.user_metadata?.name ||
-      email
-
-    const avatarUrl =
-      user?.user_metadata?.avatar_url ||
-      user?.user_metadata?.picture ||
-      ''
-
+    const email     = user?.email || ''
+    const fullName  = user?.user_metadata?.full_name || user?.user_metadata?.name || email
+    const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || ''
     const qrCodeValue = `NEU-PROF-${user.id}`
 
-    const generateQrPng = async () => {
-      return await QRCode.toDataURL(qrCodeValue, {
-        width: 260,
-        margin: 2,
-      })
-    }
+    const generateQrPng = () =>
+      QRCode.toDataURL(qrCodeValue, { width: 260, margin: 2 })
 
-    const { data: existingProfile, error: existingError } = await supabase
+    const { data: existing, error: fetchErr } = await supabase
       .from('profiles')
-      .select(
-        'id, email, full_name, role, avatar_url, qr_code_value, qr_code_png, created_at'
-      )
+      .select('id, email, full_name, role, avatar_url, qr_code_value, qr_code_png, created_at')
       .eq('id', user.id)
       .maybeSingle()
 
-    console.log('existingProfile result:', existingProfile, existingError)
+    if (fetchErr) throw fetchErr
 
-    if (existingError) throw existingError
-
-    if (!existingProfile) {
-      const qrCodePng = await generateQrPng()
-
-      const { error: insertError } = await supabase.from('profiles').insert({
-        id: user.id,
-        email,
-        full_name: fullName,
-        avatar_url: avatarUrl,
-        role: 'professor',
-        qr_code_value: qrCodeValue,
-        qr_code_png: qrCodePng,
+    if (!existing) {
+      const qr_code_png = await generateQrPng()
+      const { error: insertErr } = await supabase.from('profiles').insert({
+        id: user.id, email, full_name: fullName, avatar_url: avatarUrl,
+        role: 'professor', qr_code_value: qrCodeValue, qr_code_png,
       })
+      if (insertErr) throw insertErr
 
-      console.log('insert profile result:', insertError)
-
-      if (insertError) throw insertError
-
-      const { data: insertedProfile, error: insertedError } = await supabase
+      const { data: fresh, error: freshErr } = await supabase
         .from('profiles')
-        .select(
-          'id, email, full_name, role, avatar_url, qr_code_value, qr_code_png, created_at'
-        )
-        .eq('id', user.id)
-        .single()
-
-      console.log('fetch inserted profile result:', insertedProfile, insertedError)
-
-      if (insertedError) throw insertedError
-      return insertedProfile
+        .select('id, email, full_name, role, avatar_url, qr_code_value, qr_code_png, created_at')
+        .eq('id', user.id).single()
+      if (freshErr) throw freshErr
+      return fresh
     }
 
-    const updatePayload = {
-      full_name: fullName,
-      avatar_url: avatarUrl,
-    }
+    // Update name/avatar and fill missing QR fields
+    const patch = { full_name: fullName, avatar_url: avatarUrl }
+    if (!existing.qr_code_value) patch.qr_code_value = qrCodeValue
+    if (!existing.qr_code_png)   patch.qr_code_png   = await generateQrPng()
 
-    if (!existingProfile.qr_code_value) {
-      updatePayload.qr_code_value = qrCodeValue
-    }
+    const { error: updateErr } = await supabase
+      .from('profiles').update(patch).eq('id', user.id)
+    if (updateErr) throw updateErr
 
-    if (!existingProfile.qr_code_png) {
-      updatePayload.qr_code_png = await generateQrPng()
-    }
-
-    if (Object.keys(updatePayload).length > 0) {
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update(updatePayload)
-        .eq('id', user.id)
-
-      console.log('update profile result:', updateError)
-
-      if (updateError) throw updateError
-    }
-
-    return {
-      ...existingProfile,
-      ...updatePayload,
-    }
+    return { ...existing, ...patch }
   }
 
-  const initializeFromSession = async (currentSession) => {
-    if (isInitializingRef.current) {
-      console.log('initializeFromSession skipped: already running')
-      return
-    }
+  useEffect(() => {
+    // The ONLY way we handle auth — listen to onAuthStateChange.
+    // On page load Supabase fires INITIAL_SESSION with the stored session
+    // (or null if logged out). This is more reliable than getSession()
+    // because it's guaranteed to fire exactly once before any other event.
 
-    isInitializingRef.current = true
-    setLoading(true)
-    setError('')
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('AUTH EVENT:', event, session?.user?.email)
 
-    try {
-      setSession(currentSession)
+        // Ignore token refreshes — no need to re-fetch profile
+        if (event === 'TOKEN_REFRESHED') return
 
-      if (!currentSession?.user) {
-        setProfile(null)
-        return
-      }
+        // SIGNED_OUT — clear everything
+        if (event === 'SIGNED_OUT') {
+          sessionStorage.removeItem('qr_professor_profile')
+          setProfile(null)
+          setQrProfessorProfile(null)
+          setLoading(false)
+          return
+        }
 
-      if (!isNeuEmail(currentSession.user.email)) {
-        await supabase.auth.signOut()
-        throw new Error(
-          'Only institutional emails ending with @neu.edu.ph are allowed.'
-        )
-      }
+        // INITIAL_SESSION fires on every page load with the persisted session.
+        // SIGNED_IN fires after OAuth redirect (fresh login).
+        // Both cases: if there's a user, load their profile.
+        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+          if (!session?.user) {
+            // No session → show login
+            setProfile(null)
+            setLoading(false)
+            return
+          }
 
-      const p = await buildOrFetchProfile(currentSession.user)
+          try {
+            if (!isNeuEmail(session.user.email)) {
+              await supabase.auth.signOut()
+              setError('Only @neu.edu.ph institutional emails are allowed.')
+              setProfile(null)
+              setLoading(false)
+              return
+            }
 
-      if (!isMountedRef.current) return
-      setProfile(p)
-    } catch (err) {
-      console.error('INITIALIZE ERROR:', err)
-      if (!isMountedRef.current) return
-      setError(err.message || 'Failed to initialize app.')
-    } finally {
-      if (isMountedRef.current) {
+            const p = await buildOrFetchProfile(session.user)
+            setProfile(p)
+            setError('')
+          } catch (err) {
+            console.error('Profile load error:', err)
+            setError(err.message || 'Failed to load profile.')
+            setProfile(null)
+          } finally {
+            setLoading(false)
+          }
+          return
+        }
+
+        // Any other event — just stop loading
         setLoading(false)
       }
-      isInitializingRef.current = false
-    }
-  }
+    )
 
-useEffect(() => {
-  let mounted = true
+    return () => subscription.unsubscribe()
+  }, [])
 
-  const initializeFromSession = async (currentSession) => {
-    if (!mounted) return
-
-    setLoading(true)
-    setError('')
-
-    try {
-      setSession(currentSession)
-
-      if (!currentSession?.user) {
-        setProfile(null)
-        return
-      }
-
-      if (!isNeuEmail(currentSession.user.email)) {
-        await supabase.auth.signOut()
-        throw new Error(
-          'Only institutional emails ending with @neu.edu.ph are allowed.'
-        )
-      }
-
-      const p = await buildOrFetchProfile(currentSession.user)
-
-      if (!mounted) return
-      setProfile(p)
-    } catch (err) {
-      console.error('INITIALIZE ERROR:', err)
-      if (!mounted) return
-      setError(err.message || 'Failed to initialize app.')
-    } finally {
-      if (mounted) {
-        setLoading(false)
-      }
-    }
-  }
-
-
-  const start = async () => {
-    console.log('BOOTSTRAP START')
-
-    try {
-      const { data, error: sessionError } = await supabase.auth.getSession()
-
-      console.log('GET SESSION RESULT:', data, sessionError)
-
-      if (sessionError) throw sessionError
-
-      await initializeFromSession(data.session)
-    } catch (err) {
-      console.error('BOOTSTRAP ERROR:', err)
-      if (!mounted) return
-      setError(err.message || 'Failed to initialize app.')
-      setLoading(false)
-    }
-  }
-
-  start()
-
-  const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
-    console.log('AUTH STATE CHANGED:', event, newSession)
-
-    if (!mounted) return
-
-    if (event === 'TOKEN_REFRESHED') {
-      setSession(newSession)
-      return
-    }
-
-    if (event === 'INITIAL_SESSION') {
-      return
-    }
-
-    setTimeout(() => {
-      initializeFromSession(newSession)
-    }, 0)
-  })
-
-  return () => {
-    mounted = false
-    listener.subscription.unsubscribe()
-  }
-}, [])
-const logoutUser = async () => {
-    setQrProfessorProfile(null)
-    setProfile(null)
-    setSession(null)
-    await supabase.auth.signOut()
-  }
-useEffect(() => {
+  // ── IDLE TIMEOUT: auto-logout after 5 minutes of inactivity ──
+  useEffect(() => {
     if (!profile && !qrProfessorProfile) return
 
     let timeoutId
-
-    const resetIdleTimer = () => {
+    const resetTimer = () => {
       clearTimeout(timeoutId)
-
-      timeoutId = setTimeout(() => {
-        logoutUser()
-      }, 5 * 60 * 1000) // 5 minutes
+      timeoutId = setTimeout(logoutUser, 5 * 60 * 1000)
     }
 
-    const events = [
-      'mousemove',
-      'mousedown',
-      'click',
-      'scroll',
-      'keydown',
-      'touchstart',
-    ]
-
-    events.forEach((event) => {
-      window.addEventListener(event, resetIdleTimer)
-    })
-
-    resetIdleTimer()
+    const events = ['mousemove', 'mousedown', 'click', 'scroll', 'keydown', 'touchstart']
+    events.forEach((e) => window.addEventListener(e, resetTimer))
+    resetTimer()
 
     return () => {
       clearTimeout(timeoutId)
-
-      events.forEach((event) => {
-        window.removeEventListener(event, resetIdleTimer)
-      })
+      events.forEach((e) => window.removeEventListener(e, resetTimer))
     }
   }, [profile, qrProfessorProfile])
-  
-  const handleLogout = async () => {
-    await logoutUser()
+
+  const logoutUser = async () => {
+    sessionStorage.removeItem('qr_professor_profile')
+    setQrProfessorProfile(null)
+    setProfile(null)
+    await supabase.auth.signOut()
   }
 
   const handleQrProfessorLogin = async (qrValue) => {
-    const normalizedQrValue = (qrValue || '').trim()
-
-    console.log('SCANNED QR VALUE:', normalizedQrValue)
-
     const { data, error } = await supabase.rpc('find_professor_by_qr', {
-      input_qr: normalizedQrValue,
+      input_qr: (qrValue || '').trim(),
     })
-
-    console.log('QR LOGIN RESULT:', data, error)
-
-    if (error) {
-      throw new Error(error.message || 'Failed to verify QR code.')
-    }
-
-    if (!data || data.length === 0) {
-      throw new Error(`QR code not recognized: ${normalizedQrValue}`)
-    }
-
+    if (error) throw new Error(error.message || 'Failed to verify QR code.')
+    if (!data || data.length === 0)
+      throw new Error(`QR code not recognized: ${qrValue}`)
+    sessionStorage.setItem('qr_professor_profile', JSON.stringify(data[0]))
     setQrProfessorProfile(data[0])
   }
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="rounded-2xl border border-slate-200 bg-white px-6 py-4 shadow-sm">
-          Loading...
+      <div style={{
+        display: 'flex', minHeight: '100vh',
+        alignItems: 'center', justifyContent: 'center',
+        background: '#f8fafc',
+      }}>
+        <div style={{
+          borderRadius: '16px', border: '1px solid #e2e8f0',
+          background: '#fff', padding: '16px 28px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+          fontSize: '14px', color: '#475569',
+        }}>
+          Loading…
         </div>
       </div>
     )
   }
 
-  const activeProfessor =
-    qrProfessorProfile || (profile?.role === 'professor' ? profile : null)
-
-  const activeAdmin = profile?.role === 'admin' ? profile : null
+  const activeProfessor = qrProfessorProfile || (profile?.role === 'professor' ? profile : null)
+  const activeAdmin     = profile?.role === 'admin' ? profile : null
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {error && (
-          <div className="mb-6 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-red-700">
-            {error}
-          </div>
-        )}
+    <div style={{ minHeight: '100vh', width: '100vw', overflowX: 'hidden' }}>
+      {error && (
+        <div style={{
+          position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 100, background: '#fef2f2', border: '1px solid #fca5a5',
+          borderRadius: '12px', padding: '10px 20px', color: '#b91c1c',
+          fontSize: '14px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+          whiteSpace: 'nowrap',
+        }}>
+          {error}
+        </div>
+      )}
 
-        {!activeProfessor && !activeAdmin ? (
-          <LoginPage onQrProfessorLogin={handleQrProfessorLogin} />
-        ) : activeAdmin ? (
-          <AdminDashboard profile={activeAdmin} onLogout={handleLogout} />
-        ) : (
-          <ProfessorDashboard
-            profile={activeProfessor}
-            isQrMode={!!qrProfessorProfile}
-            onLogout={handleLogout}
-          />
-        )}
-      </div>
+      {!activeProfessor && !activeAdmin ? (
+        <LoginPage onQrProfessorLogin={handleQrProfessorLogin} />
+      ) : activeAdmin ? (
+        <AdminDashboard profile={activeAdmin} onLogout={logoutUser} />
+      ) : (
+        <ProfessorDashboard
+          profile={activeProfessor}
+          isQrMode={!!qrProfessorProfile}
+          onLogout={logoutUser}
+        />
+      )}
     </div>
   )
 }
