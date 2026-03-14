@@ -35,11 +35,10 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout }) {
   const loadMyLogs = async () => {
     setLoadingLogs(true)
     try {
-      const { data, error } = await supabase
-        .from('usage_logs')
-        .select('*')
-        .eq('professor_id', profile.id)
-        .order('start_time', { ascending: false })
+      // Use RPC so QR mode (no auth session) can also read logs
+      const { data, error } = await supabase.rpc('get_professor_logs_by_id', {
+        input_professor_id: profile.id,
+      })
       if (error) throw error
       setLogs(data || [])
     } catch (err) {
@@ -156,35 +155,23 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout }) {
         throw new Error('End time must be later than start time.')
       }
 
-      // ── CHECK FOR ROOM CONFLICT ──
-      // Overlapping ranges: existing.start < new.end AND existing.end > new.start
-      const { data: conflicts, error: conflictError } = await supabase
-        .from('usage_logs')
-        .select('id, professor_name_snapshot, start_time, end_time')
-        .eq('room_number', normalizedRoom)
-        .lt('start_time', end_time.toISOString())
-        .gt('end_time', start_time.toISOString())
-
-      if (conflictError) throw conflictError
-
-      if (conflicts && conflicts.length > 0) {
-        const c = conflicts[0]
-        const fmt = (iso) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        throw new Error(
-          `Room ${normalizedRoom} is already occupied from ${fmt(c.start_time)} to ${fmt(c.end_time)} by ${c.professor_name_snapshot}. Please choose a different room or time slot.`
-        )
-      }
-
-      const { error } = await supabase.from('usage_logs').insert({
-        professor_id: profile.id,
-        professor_name_snapshot: profile.full_name,
-        professor_email_snapshot: profile.email,
-        subject: form.subject,
-        room_number: normalizedRoom,
-        start_time: start_time.toISOString(),
-        end_time: end_time.toISOString(),
+      // ── CONFLICT CHECK + INSERT via SECURITY DEFINER RPC ──
+      // This works for both normal login and QR mode (no auth.uid session).
+      // The function checks for overlapping bookings atomically then inserts.
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('safe_insert_usage_log', {
+        p_professor_id:    profile.id,
+        p_professor_name:  profile.full_name,
+        p_professor_email: profile.email,
+        p_subject:         form.subject,
+        p_room_number:     normalizedRoom,
+        p_start_time:      start_time.toISOString(),
+        p_end_time:        end_time.toISOString(),
       })
-      if (error) throw error
+
+      if (rpcError) throw rpcError
+      if (rpcResult && !rpcResult.success) {
+        throw new Error(rpcResult.error)
+      }
 
       setMessage(`Thank you for using Room ${normalizedRoom}`)
       setForm({ subject: '', room_number: '', date: getLocalToday(), start_clock: '', end_clock: '' })
@@ -236,7 +223,7 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout }) {
               NEU LabLog
             </div>
             <div style={{ fontSize: '11px', color: '#c9a84c', letterSpacing: '0.5px', marginTop: '2px' }}>
-              New Era University · Laboratory Room Usage System
+              Nueva Ecija University · Laboratory Room Usage System
             </div>
           </div>
         </div>
