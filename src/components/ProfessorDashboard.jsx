@@ -156,6 +156,25 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout }) {
         throw new Error('End time must be later than start time.')
       }
 
+      // ── CHECK FOR ROOM CONFLICT ──
+      // Overlapping ranges: existing.start < new.end AND existing.end > new.start
+      const { data: conflicts, error: conflictError } = await supabase
+        .from('usage_logs')
+        .select('id, professor_name_snapshot, start_time, end_time')
+        .eq('room_number', normalizedRoom)
+        .lt('start_time', end_time.toISOString())
+        .gt('end_time', start_time.toISOString())
+
+      if (conflictError) throw conflictError
+
+      if (conflicts && conflicts.length > 0) {
+        const c = conflicts[0]
+        const fmt = (iso) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        throw new Error(
+          `Room ${normalizedRoom} is already occupied from ${fmt(c.start_time)} to ${fmt(c.end_time)} by ${c.professor_name_snapshot}. Please choose a different room or time slot.`
+        )
+      }
+
       const { error } = await supabase.from('usage_logs').insert({
         professor_id: profile.id,
         professor_name_snapshot: profile.full_name,
