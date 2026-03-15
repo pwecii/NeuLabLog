@@ -1,6 +1,6 @@
 # NEU LabLog
 
-A web-based laboratory room usage logging system for Nueva Ecija University (NEU). Faculty can record and monitor laboratory room usage through Google sign-in or QR code authentication.
+A web-based laboratory room usage logging system for New Era University (NEU). Faculty can record and monitor laboratory room usage through Google sign-in or QR code authentication.
 
 ---
 
@@ -33,56 +33,7 @@ A web-based laboratory room usage logging system for Nueva Ecija University (NEU
 
 ---
 
-## Environment Variables
 
-Create a `.env` file in the root of the project:
 
-```
-VITE_SUPABASE_URL=your_supabase_project_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
-
----
-
-## Getting Started
-
-```bash
-# Install dependencies
-npm install
-
-# Run locally
-npm run dev
-
-# Build for production
-npm run build
-```
-
----
-
-## Deployment
-
-This project is deployed on **Vercel**.
-
-1. Push the project to GitHub
-2. Import the repository in [vercel.com](https://vercel.com)
-3. Add the environment variables in Vercel project settings
-4. In Supabase → Authentication → URL Configuration, set your Vercel URL as the Site URL and Redirect URL
-
----
-
-## Database
-
-Two main tables in Supabase:
-
-- **`profiles`** — stores professor and admin accounts, roles, and QR codes
-- **`usage_logs`** — stores all laboratory usage records with room, subject, and time details
-
-Row Level Security (RLS) is enabled. Three SECURITY DEFINER functions handle operations that need to work for both Google-login and QR-mode users:
-
-- `safe_insert_usage_log` — conflict check + insert
-- `get_professor_logs_by_id` — fetch logs by professor
-- `find_professor_by_qr` — QR code login lookup
-
----
 
 > For authorized NEU faculty use only · @neu.edu.ph accounts only
