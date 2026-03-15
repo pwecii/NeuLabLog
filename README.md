@@ -32,7 +32,9 @@ A web-based laboratory room usage logging system for New Era University (NEU). F
 - Filter logs by date range and view a usage chart per room
 
 ---
+## Live Site
 
+🌐 [neu-lab-log.vercel.app](https://neu-lab-log.vercel.app/)
 
 
 
