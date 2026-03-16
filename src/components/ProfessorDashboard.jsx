@@ -183,7 +183,7 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBack
     }
   }
 
-  const inputClass = "w-full rounded-xl border border-slate-300 bg-white px-4 py-3.5 text-base outline-none focus:border-[#0f2744] focus:ring-1 focus:ring-[#0f2744]"
+  const inputClass = "w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 sm:px-4 sm:py-3.5 text-sm sm:text-base outline-none focus:border-[#0f2744] focus:ring-1 focus:ring-[#0f2744]"
   const labelClass = "mb-2 block text-xs font-semibold text-slate-500 uppercase tracking-wide"
 
   const periodTabs = [
@@ -202,12 +202,12 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBack
         style={{
           background: '#0f2744',
           borderBottom: '4px solid #c9a84c',
-          padding: '0 24px',
+          padding: '0 12px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '16px',
-          minHeight: '72px',
+          gap: '8px',
+          minHeight: '60px',
           flexShrink: 0,
         }}
       >
@@ -223,30 +223,30 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBack
               NEU LabLog
             </div>
             <div style={{ fontSize: '11px', color: '#c9a84c', letterSpacing: '0.5px', marginTop: '2px' }}>
-              New Era University · Laboratory Room Usage System
+              Nueva Ecija University · Laboratory Room Usage System
             </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           {profile?.avatar_url ? (
             <img src={profile.avatar_url} alt={profile.full_name}
-              style={{ height: '40px', width: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #c9a84c' }} />
+              style={{ height: '34px', width: '34px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #c9a84c', flexShrink: 0 }} />
           ) : (
             <div style={{
-              height: '40px', width: '40px', borderRadius: '50%', background: '#c9a84c',
+              height: '34px', width: '34px', borderRadius: '50%', background: '#c9a84c',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '16px', fontWeight: '700', color: '#0f2744', flexShrink: 0,
+              fontSize: '14px', fontWeight: '700', color: '#0f2744', flexShrink: 0,
             }}>
               {profile?.full_name?.charAt(0)?.toUpperCase() || 'P'}
             </div>
           )}
 
-          <div className="hidden sm:block" style={{ lineHeight: 1.3 }}>
-            <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: '#ffffff' }}>{fullName}</p>
-            <p style={{ margin: 0, fontSize: '11px', color: '#93c5fd' }}>{profile.email}</p>
+          <div className="hidden sm:block" style={{ lineHeight: 1.3, marginRight: '4px' }}>
+            <p style={{ margin: 0, fontSize: '12px', fontWeight: '600', color: '#ffffff' }}>{fullName}</p>
+            <p style={{ margin: 0, fontSize: '10px', color: '#93c5fd' }}>{profile.email}</p>
             {isQrMode && (
-              <span style={{ fontSize: '10px', background: '#c9a84c', color: '#0f2744', borderRadius: '999px', padding: '1px 8px', fontWeight: '700' }}>
+              <span style={{ fontSize: '9px', background: '#c9a84c', color: '#0f2744', borderRadius: '999px', padding: '1px 7px', fontWeight: '700' }}>
                 QR Mode
               </span>
             )}
@@ -256,17 +256,20 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBack
             <button onClick={onBackToAdmin}
               style={{
                 background: 'rgba(201,168,76,0.2)', border: '1.5px solid #c9a84c',
-                borderRadius: '8px', color: '#c9a84c', fontSize: '13px', fontWeight: '600',
-                padding: '8px 16px', cursor: 'pointer', flexShrink: 0,
+                borderRadius: '8px', color: '#c9a84c',
+                fontSize: 'clamp(0.65rem, 2vw, 0.8rem)', fontWeight: '600',
+                padding: '5px 10px', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap',
               }}>
-              Back to Admin
+              <span className="hidden sm:inline">Back to Admin</span>
+              <span className="sm:hidden">Admin</span>
             </button>
           )}
           <button onClick={onLogout}
             style={{
               background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.3)',
-              borderRadius: '8px', color: '#ffffff', fontSize: '13px', fontWeight: '500',
-              padding: '8px 16px', cursor: 'pointer', flexShrink: 0,
+              borderRadius: '8px', color: '#ffffff',
+              fontSize: 'clamp(0.65rem, 2vw, 0.8rem)', fontWeight: '500',
+              padding: '5px 10px', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap',
             }}>
             Logout
           </button>
@@ -282,7 +285,7 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBack
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
           backgroundAttachment: 'fixed',
-          padding: '2rem 1rem',
+          padding: 'clamp(1rem, 3vw, 2rem) clamp(0.5rem, 2vw, 1rem)',
         }}
       >
         <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -298,8 +301,8 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBack
               boxShadow: '0 4px 24px rgba(15,39,68,0.12)', overflow: 'hidden',
             }}>
               <div style={{ height: '4px', background: '#c9a84c' }} />
-              <div style={{ padding: '2rem' }}>
-                <h3 style={{ margin: '0 0 1.25rem 0', fontSize: '20px', fontWeight: '700', color: '#0f2744' }}>
+              <div style={{ padding: 'clamp(1rem, 4vw, 2rem)' }}>
+                <h3 style={{ margin: '0 0 1rem 0', fontSize: 'clamp(16px, 4vw, 20px)', fontWeight: '700', color: '#0f2744' }}>
                   Record Laboratory Usage
                 </h3>
 
@@ -337,7 +340,7 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBack
                       ))}
                     </select>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: '8px' }}>
                     <div>
                       <label className={labelClass}>Date</label>
                       <input type="date" value={form.date}
@@ -374,11 +377,11 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBack
               boxShadow: '0 4px 24px rgba(15,39,68,0.12)', overflow: 'hidden',
             }}>
               <div style={{ height: '4px', background: '#c9a84c' }} />
-              <div style={{ padding: '1.5rem' }}>
+              <div style={{ padding: 'clamp(1rem, 3vw, 1.5rem)' }}>
 
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#0f2744' }}>My Recent Usage</h3>
+                  <h3 style={{ margin: 0, fontSize: 'clamp(14px, 3vw, 16px)', fontWeight: '700', color: '#0f2744' }}>My Recent Usage</h3>
                   <button onClick={loadMyLogs}
                     style={{
                       background: 'transparent', border: '1px solid #cbd5e1',
@@ -396,9 +399,9 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBack
                       key={tab.key}
                       onClick={() => setFilterPeriod(tab.key)}
                       style={{
-                        padding: '5px 12px',
+                        padding: 'clamp(3px, 1vw, 5px) clamp(8px, 2vw, 12px)',
                         borderRadius: '999px',
-                        fontSize: '12px',
+                        fontSize: 'clamp(10px, 2vw, 12px)',
                         fontWeight: '600',
                         border: 'none',
                         cursor: 'pointer',
@@ -490,8 +493,8 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBack
             boxShadow: '0 4px 24px rgba(15,39,68,0.12)', overflow: 'hidden',
           }}>
             <div style={{ height: '4px', background: '#c9a84c' }} />
-            <div style={{ padding: '1.5rem' }}>
-              <h3 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: '700', color: '#0f2744' }}>My QR Login Code</h3>
+            <div style={{ padding: 'clamp(1rem, 3vw, 1.5rem)' }}>
+              <h3 style={{ margin: '0 0 4px 0', fontSize: 'clamp(14px, 3vw, 16px)', fontWeight: '700', color: '#0f2744' }}>My QR Login Code</h3>
               <p style={{ margin: '0 0 1.25rem 0', fontSize: '13px', color: '#64748b' }}>
                 This QR code can be used to log in quickly on the QR scanner.
               </p>
@@ -501,9 +504,9 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBack
                 <div style={{ border: '2px solid #0f2744', borderRadius: '12px', padding: '12px', background: '#fff', flexShrink: 0 }}>
                   {profile?.qr_code_png ? (
                     <img src={profile.qr_code_png} alt="Professor QR Code"
-                      style={{ height: '200px', width: '200px', display: 'block' }} />
+                      style={{ height: 'clamp(140px, 40vw, 200px)', width: 'clamp(140px, 40vw, 200px)', display: 'block' }} />
                   ) : (
-                    <div style={{ height: '200px', width: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', color: '#94a3b8' }}>
+                    <div style={{ height: 'clamp(140px, 40vw, 200px)', width: 'clamp(140px, 40vw, 200px)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', color: '#94a3b8' }}>
                       QR code not available yet
                     </div>
                   )}
