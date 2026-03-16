@@ -8,7 +8,7 @@ import {
 import neuLogo from '../images/neu.png'
 import backgroundImage from '../images/Background.png'
 
-export default function ProfessorDashboard({ profile, isQrMode, onLogout }) {
+export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBackToAdmin }) {
   const [form, setForm] = useState({
     subject: '',
     room_number: '',
@@ -252,6 +252,16 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout }) {
             )}
           </div>
 
+          {onBackToAdmin && (
+            <button onClick={onBackToAdmin}
+              style={{
+                background: 'rgba(201,168,76,0.2)', border: '1.5px solid #c9a84c',
+                borderRadius: '8px', color: '#c9a84c', fontSize: '13px', fontWeight: '600',
+                padding: '8px 16px', cursor: 'pointer', flexShrink: 0,
+              }}>
+              Back to Admin
+            </button>
+          )}
           <button onClick={onLogout}
             style={{
               background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.3)',
@@ -368,7 +378,7 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout }) {
 
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                  <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#0f2744' }}>My Recent Usage</h3>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#0f2744' }}>My Recent Usage</h3>
                   <button onClick={loadMyLogs}
                     style={{
                       background: 'transparent', border: '1px solid #cbd5e1',
@@ -481,7 +491,7 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout }) {
           }}>
             <div style={{ height: '4px', background: '#c9a84c' }} />
             <div style={{ padding: '1.5rem' }}>
-              <h3 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '700', color: '#0f2744' }}>My QR Login Code</h3>
+              <h3 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: '700', color: '#0f2744' }}>My QR Login Code</h3>
               <p style={{ margin: '0 0 1.25rem 0', fontSize: '13px', color: '#64748b' }}>
                 This QR code can be used to log in quickly on the QR scanner.
               </p>
