@@ -10,12 +10,20 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState(null)
   const [error, setError] = useState('')
+  const [viewAsProf, setViewAsProf] = useState(false)
   const [qrProfessorProfile, setQrProfessorProfile] = useState(() => {
     try {
       const stored = sessionStorage.getItem('qr_professor_profile')
       return stored ? JSON.parse(stored) : null
     } catch { return null }
   })
+
+  // ── ADMIN EMAIL LIST ──
+  // Add any email here to automatically assign admin role on first login.
+  const ADMIN_EMAILS = [
+    'jcesperanza@neu.edu.ph',
+    // 'another.admin@neu.edu.ph',
+  ]
 
   const buildOrFetchProfile = async (user) => {
     const email     = user?.email || ''
@@ -38,7 +46,7 @@ export default function App() {
       const qr_code_png = await generateQrPng()
       const { error: insertErr } = await supabase.from('profiles').insert({
         id: user.id, email, full_name: fullName, avatar_url: avatarUrl,
-        role: 'professor', qr_code_value: qrCodeValue, qr_code_png,
+        role: ADMIN_EMAILS.includes(email) ? 'admin' : 'professor', qr_code_value: qrCodeValue, qr_code_png,
       })
       if (insertErr) throw insertErr
 
@@ -54,6 +62,8 @@ export default function App() {
     const patch = { full_name: fullName, avatar_url: avatarUrl }
     if (!existing.qr_code_value) patch.qr_code_value = qrCodeValue
     if (!existing.qr_code_png)   patch.qr_code_png   = await generateQrPng()
+    // Upgrade to admin if email is in the admin list (even if already exists as professor)
+    if (ADMIN_EMAILS.includes(email) && existing.role !== 'admin') patch.role = 'admin'
 
     const { error: updateErr } = await supabase
       .from('profiles').update(patch).eq('id', user.id)
@@ -183,7 +193,8 @@ export default function App() {
   }
 
   const activeProfessor = qrProfessorProfile || (profile?.role === 'professor' ? profile : null)
-  const activeAdmin     = profile?.role === 'admin' ? profile : null
+  const activeAdmin     = profile?.role === 'admin' && !viewAsProf ? profile : null
+  const adminViewingAsProf = profile?.role === 'admin' && viewAsProf ? profile : null
 
   return (
     <div style={{ minHeight: '100vh', width: '100vw', overflowX: 'hidden' }}>
@@ -199,10 +210,21 @@ export default function App() {
         </div>
       )}
 
-      {!activeProfessor && !activeAdmin ? (
+      {!activeProfessor && !activeAdmin && !adminViewingAsProf ? (
         <LoginPage onQrProfessorLogin={handleQrProfessorLogin} />
       ) : activeAdmin ? (
-        <AdminDashboard profile={activeAdmin} onLogout={logoutUser} />
+        <AdminDashboard
+          profile={activeAdmin}
+          onLogout={logoutUser}
+          onSwitchView={() => setViewAsProf(true)}
+        />
+      ) : adminViewingAsProf ? (
+        <ProfessorDashboard
+          profile={adminViewingAsProf}
+          isQrMode={false}
+          onLogout={logoutUser}
+          onBackToAdmin={() => setViewAsProf(false)}
+        />
       ) : (
         <ProfessorDashboard
           profile={activeProfessor}
