@@ -13,7 +13,7 @@ import {
   Tooltip,
 } from 'recharts'
 
-export default function AdminDashboard({ profile, onLogout }) {
+export default function AdminDashboard({ profile, onLogout, onSwitchView }) {
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -277,7 +277,7 @@ export default function AdminDashboard({ profile, onLogout }) {
               overflow: 'hidden',
               textOverflow: 'ellipsis',
             }}>
-              Nueva Ecija University · Laboratory Room Usage System
+              New Era University · Laboratory Room Usage System
             </div>
           </div>
         </div>
@@ -305,6 +305,22 @@ export default function AdminDashboard({ profile, onLogout }) {
               {(profile.full_name || 'A')[0].toUpperCase()}
             </span>
           </div>
+          <button
+            onClick={onSwitchView}
+            style={{
+              background: 'rgba(201,168,76,0.2)',
+              border: '1.5px solid #c9a84c',
+              borderRadius: '8px',
+              color: '#c9a84c',
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              padding: '6px 14px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Professor View
+          </button>
           <button
             onClick={onLogout}
             style={{
