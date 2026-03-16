@@ -209,9 +209,9 @@ export default function AdminDashboard({ profile, onLogout, onSwitchView }) {
     backdropFilter: 'blur(14px)',
     WebkitBackdropFilter: 'blur(14px)',
     border: '1px solid rgba(255,255,255,0.7)',
-    borderRadius: '20px',
+    borderRadius: '16px',
     boxShadow: '0 4px 24px rgba(15,39,68,0.10)',
-    padding: '20px',
+    padding: 'clamp(12px, 3vw, 20px)',
   }
 
   const sectionTitle = {
@@ -241,102 +241,86 @@ export default function AdminDashboard({ profile, onLogout, onSwitchView }) {
       <div style={{
         background: '#0f2744',
         borderBottom: '4px solid #c9a84c',
-        padding: '0 16px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '12px',
-        minHeight: '60px',
         flexShrink: 0,
         width: '100%',
       }}>
-        {/* Left: logo + title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-          <img
-            src={neuLogo}
-            alt="NEU Logo"
-            style={{ height: '40px', width: '40px', objectFit: 'contain', flexShrink: 0 }}
-          />
-          <div style={{ borderLeft: '1px solid rgba(255,255,255,0.25)', paddingLeft: '12px', minWidth: 0 }}>
-            <div style={{
-              fontFamily: "'Kelly Slab', cursive",
-              fontSize: 'clamp(14px, 3.5vw, 22px)',
-              fontWeight: '600',
-              color: '#ffffff',
-              letterSpacing: '0.5px',
-              lineHeight: 1.2,
-              whiteSpace: 'nowrap',
-            }}>
-              NEU LabLog
-            </div>
-            <div style={{
-              fontSize: 'clamp(8px, 1.6vw, 11px)',
-              color: '#c9a84c',
-              letterSpacing: '0.5px',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}>
-              New Era University · Laboratory Room Usage System
+        <div style={{
+          padding: '0 12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '8px',
+          minHeight: '56px',
+        }}>
+          {/* Left: logo + title */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+            <img
+              src={neuLogo}
+              alt="NEU Logo"
+              style={{ height: '34px', width: '34px', objectFit: 'contain', flexShrink: 0 }}
+            />
+            <div style={{ borderLeft: '1px solid rgba(255,255,255,0.25)', paddingLeft: '8px', minWidth: 0 }}>
+              <div style={{
+                fontFamily: "'Kelly Slab', cursive",
+                fontSize: 'clamp(13px, 3.5vw, 22px)',
+                fontWeight: '600',
+                color: '#ffffff',
+                letterSpacing: '0.5px',
+                lineHeight: 1.2,
+                whiteSpace: 'nowrap',
+              }}>
+                NEU LabLog
+              </div>
+              <div className="hidden sm:block" style={{
+                fontSize: '10px',
+                color: '#c9a84c',
+                letterSpacing: '0.3px',
+                whiteSpace: 'nowrap',
+              }}>
+                New Era University · Laboratory Room Usage System
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Right: admin info + logout */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-          <div style={{ textAlign: 'right', display: 'none' }} className="sm-show">
-            <div style={{ color: '#fff', fontSize: '0.8rem', fontWeight: 600, lineHeight: 1.2 }}>{profile.full_name}</div>
-            <div style={{ color: '#c9a84c', fontSize: '0.7rem' }}>{profile.email}</div>
+          {/* Right: avatar + name (sm+) + buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+            <div style={{
+              background: 'rgba(201,168,76,0.15)', border: '1.5px solid #c9a84c',
+              borderRadius: '50%', width: '30px', height: '30px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <span style={{ color: '#c9a84c', fontSize: '0.8rem', fontWeight: 700 }}>
+                {(profile.full_name || 'A')[0].toUpperCase()}
+              </span>
+            </div>
+            <div className="hidden sm:block" style={{ lineHeight: 1.3, marginRight: '2px' }}>
+              <div style={{ color: '#fff', fontSize: '0.72rem', fontWeight: 600, whiteSpace: 'nowrap' }}>{profile.full_name}</div>
+              <div style={{ color: '#c9a84c', fontSize: '0.62rem', whiteSpace: 'nowrap' }}>{profile.email}</div>
+            </div>
+            <button
+              onClick={onSwitchView}
+              style={{
+                background: 'rgba(201,168,76,0.2)', border: '1.5px solid #c9a84c',
+                borderRadius: '7px', color: '#c9a84c',
+                fontSize: '0.72rem', fontWeight: 600,
+                padding: '5px 8px', cursor: 'pointer', whiteSpace: 'nowrap',
+              }}
+            >
+              <span className="hidden sm:inline">Professor View</span>
+              <span className="sm:hidden">Prof View</span>
+            </button>
+            <button
+              onClick={onLogout}
+              style={{
+                background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.35)',
+                borderRadius: '7px', color: '#fff',
+                fontSize: '0.72rem', fontWeight: 600,
+                padding: '5px 8px', cursor: 'pointer', whiteSpace: 'nowrap',
+              }}
+            >
+              Logout
+            </button>
           </div>
-          <div
-            style={{
-              background: 'rgba(201,168,76,0.15)',
-              border: '1.5px solid #c9a84c',
-              borderRadius: '50%',
-              width: '38px',
-              height: '38px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <span style={{ color: '#c9a84c', fontSize: '1rem', fontWeight: 700 }}>
-              {(profile.full_name || 'A')[0].toUpperCase()}
-            </span>
-          </div>
-          <button
-            onClick={onSwitchView}
-            style={{
-              background: 'rgba(201,168,76,0.2)',
-              border: '1.5px solid #c9a84c',
-              borderRadius: '8px',
-              color: '#c9a84c',
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              padding: '6px 14px',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            Professor View
-          </button>
-          <button
-            onClick={onLogout}
-            style={{
-              background: 'rgba(255,255,255,0.12)',
-              border: '1.5px solid rgba(255,255,255,0.35)',
-              borderRadius: '8px',
-              color: '#fff',
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              padding: '6px 14px',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            Logout
-          </button>
         </div>
       </div>
 
@@ -348,7 +332,7 @@ export default function AdminDashboard({ profile, onLogout, onSwitchView }) {
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundAttachment: 'fixed',
-        padding: '24px 16px 40px',
+        padding: 'clamp(12px, 3vw, 24px) clamp(8px, 2vw, 16px) 40px',
       }}>
         {/* subtle dark overlay for readability */}
         <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
@@ -357,15 +341,14 @@ export default function AdminDashboard({ profile, onLogout, onSwitchView }) {
           <div style={{ marginBottom: '20px' }}>
             <h1 style={{
               fontFamily: "'Kelly Slab', cursive",
-              fontSize: 'clamp(20px, 4vw, 30px)',
+              fontSize: 'clamp(18px, 5vw, 30px)',
               color: '#0f2744',
               textShadow: '0 1px 4px rgba(255,255,255,0.9)',
-              fontWeight: 700,
-              lineHeight: 1.2,
+              fontWeight: 700, lineHeight: 1.2,
             }}>
               Admin Dashboard
             </h1>
-            <p style={{ color: '#0f2744', fontSize: '0.85rem', marginTop: '4px', textShadow: '0 1px 3px rgba(255,255,255,0.8)' }}>
+            <p style={{ color: '#0f2744', fontSize: 'clamp(0.72rem, 2vw, 0.85rem)', marginTop: '4px', textShadow: '0 1px 3px rgba(255,255,255,0.8)' }}>
               Welcome back, <strong>{profile.full_name}</strong> · {formatDateTime(now)}
             </p>
           </div>
@@ -402,18 +385,18 @@ export default function AdminDashboard({ profile, onLogout, onSwitchView }) {
             <div className="grid gap-4 lg:grid-cols-2">
               <form onSubmit={handleAddRoom}>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#0f2744', marginBottom: '6px' }}>Add Room</label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input type="text" value={newRoom} onChange={(e) => setNewRoom(e.target.value)} placeholder="e.g. M112" style={{ ...inputStyle, flex: 1 }} />
-                  <button type="submit" disabled={savingRoom} style={{ background: '#0f2744', color: '#fff', border: 'none', borderRadius: '10px', padding: '9px 18px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', opacity: savingRoom ? 0.6 : 1 }}>
+                <div className="flex gap-2">
+                  <input type="text" value={newRoom} onChange={(e) => setNewRoom(e.target.value)} placeholder="e.g. M112" style={{ ...inputStyle, flex: 1, minWidth: 0 }} />
+                  <button type="submit" disabled={savingRoom} style={{ background: '#0f2744', color: '#fff', border: 'none', borderRadius: '10px', padding: '9px 14px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, opacity: savingRoom ? 0.6 : 1 }}>
                     {savingRoom ? 'Adding…' : 'Add'}
                   </button>
                 </div>
               </form>
               <form onSubmit={handleRemoveRoom}>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#0f2744', marginBottom: '6px' }}>Remove Room</label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input type="text" value={removeRoom} onChange={(e) => setRemoveRoom(e.target.value)} placeholder="e.g. M112" style={{ ...inputStyle, flex: 1 }} />
-                  <button type="submit" disabled={removingRoom} style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: '10px', padding: '9px 18px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', opacity: removingRoom ? 0.6 : 1 }}>
+                <div className="flex gap-2">
+                  <input type="text" value={removeRoom} onChange={(e) => setRemoveRoom(e.target.value)} placeholder="e.g. M112" style={{ ...inputStyle, flex: 1, minWidth: 0 }} />
+                  <button type="submit" disabled={removingRoom} style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: '10px', padding: '9px 14px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, opacity: removingRoom ? 0.6 : 1 }}>
                     {removingRoom ? 'Removing…' : 'Remove'}
                   </button>
                 </div>
@@ -497,14 +480,14 @@ export default function AdminDashboard({ profile, onLogout, onSwitchView }) {
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#0f2744', marginBottom: '5px' }}>Filter</label>
-                <select value={filterMode} onChange={(e) => setFilterMode(e.target.value)} style={{ ...inputStyle, width: 'auto' }}>
+                <select value={filterMode} onChange={(e) => setFilterMode(e.target.value)} style={{ ...inputStyle, width: '100%' }} className="sm:w-auto">
                   <option value="daily">Daily</option>
                   <option value="weekly">Weekly</option>
                   <option value="monthly">Monthly</option>
                   <option value="custom">Custom Date</option>
                 </select>
               </div>
-              <button onClick={fetchLogs} style={{ background: '#c9a84c', color: '#fff', border: 'none', borderRadius: '10px', padding: '9px 22px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              <button onClick={fetchLogs} className="w-full sm:w-auto" style={{ background: '#c9a84c', color: '#fff', border: 'none', borderRadius: '10px', padding: '9px 22px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                 Apply
               </button>
             </div>
