@@ -235,7 +235,7 @@ export default function AdminDashboard({ profile, onLogout, onSwitchView }) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', width: '100vw', display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
+    <div style={{ minHeight: '100vh', width: '99.5vw', display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
 
       {/* ── TOP BANNER ── */}
       <div style={{
@@ -250,19 +250,19 @@ export default function AdminDashboard({ profile, onLogout, onSwitchView }) {
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: '8px',
-          minHeight: '56px',
+          minHeight: '60px',
         }}>
           {/* Left: logo + title */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', minWidth: 0, flex: 1 }}>
             <img
               src={neuLogo}
               alt="NEU Logo"
-              style={{ height: '34px', width: '34px', objectFit: 'contain', flexShrink: 0 }}
+              style={{ height: '52px', width: '52px', objectFit: 'contain', flexShrink: 0 }}
             />
-            <div style={{ borderLeft: '1px solid rgba(255,255,255,0.25)', paddingLeft: '8px', minWidth: 0 }}>
+            <div style={{ borderLeft: '1px solid rgba(255,255,255,0.25)', paddingLeft: '16px', minWidth: 0 }}>
               <div style={{
                 fontFamily: "'Kelly Slab', cursive",
-                fontSize: 'clamp(13px, 3.5vw, 22px)',
+                fontSize: 'clamp(16px, 3vw, 24px)',
                 fontWeight: '600',
                 color: '#ffffff',
                 letterSpacing: '0.5px',
@@ -283,27 +283,30 @@ export default function AdminDashboard({ profile, onLogout, onSwitchView }) {
           </div>
 
           {/* Right: avatar + name (sm+) + buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+           {profile?.avatar_url ? (
+            <img src={profile.avatar_url} alt={profile.full_name}
+              style={{ height: '34px', width: '34px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #c9a84c', flexShrink: 0 }} />
+          ) : (
             <div style={{
-              background: 'rgba(201,168,76,0.15)', border: '1.5px solid #c9a84c',
-              borderRadius: '50%', width: '30px', height: '30px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              height: '34px', width: '34px', borderRadius: '50%', background: '#c9a84c',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '14px', fontWeight: '700', color: '#0f2744', flexShrink: 0,
             }}>
-              <span style={{ color: '#c9a84c', fontSize: '0.8rem', fontWeight: 700 }}>
-                {(profile.full_name || 'A')[0].toUpperCase()}
-              </span>
+              {profile?.full_name?.charAt(0)?.toUpperCase() || 'P'}
             </div>
-            <div className="hidden sm:block" style={{ lineHeight: 1.3, marginRight: '2px' }}>
-              <div style={{ color: '#fff', fontSize: '0.72rem', fontWeight: 600, whiteSpace: 'nowrap' }}>{profile.full_name}</div>
-              <div style={{ color: '#c9a84c', fontSize: '0.62rem', whiteSpace: 'nowrap' }}>{profile.email}</div>
+          )}
+            <div className="hidden sm:block" style={{ lineHeight: 1.3, marginRight: '4px' }}>
+              <div style={{ color: '#fff', fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap' }}>{profile.full_name}</div>
+              <div style={{ color: '#c9a84c', fontSize: '10px', whiteSpace: 'nowrap' }}>{profile.email}</div>
             </div>
             <button
               onClick={onSwitchView}
               style={{
                 background: 'rgba(201,168,76,0.2)', border: '1.5px solid #c9a84c',
                 borderRadius: '7px', color: '#c9a84c',
-                fontSize: '0.72rem', fontWeight: 600,
-                padding: '5px 8px', cursor: 'pointer', whiteSpace: 'nowrap',
+                fontSize: 'clamp(0.65rem, 2vw, 0.8rem)', fontWeight: 600,
+                padding: '5px 10px', cursor: 'pointer', whiteSpace: 'nowrap',
               }}
             >
               <span className="hidden sm:inline">Professor View</span>
