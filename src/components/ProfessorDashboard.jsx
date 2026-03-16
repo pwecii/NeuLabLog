@@ -195,7 +195,7 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBack
   ]
 
   return (
-    <div style={{ minHeight: '100vh', width: '100vw', display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
+    <div style={{ minHeight: '100vh', width: '99.5vw', display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
 
       {/* ── TOP BANNER ── */}
       <div
@@ -209,11 +209,12 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBack
           gap: '8px',
           minHeight: '60px',
           flexShrink: 0,
+          width: '100%',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <img src={neuLogo} alt="NEU Logo"
-            style={{ height: '52px', width: '52px', objectFit: 'contain', flexShrink: 0 }} />
+            style={{ height: '52px', width: '52px', objectFit: 'contain', flexShrink: 1 }} />
           <div style={{ borderLeft: '1px solid rgba(255,255,255,0.25)', paddingLeft: '16px' }}>
             <div style={{
               fontFamily: "'Kelly Slab', cursive",
@@ -222,9 +223,14 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBack
             }}>
               NEU LabLog
             </div>
-            <div style={{ fontSize: '11px', color: '#c9a84c', letterSpacing: '0.5px', marginTop: '2px' }}>
-              New Era University · Laboratory Room Usage System
-            </div>
+           <div className="hidden sm:block" style={{
+                fontSize: '10px',
+                color: '#c9a84c',
+                letterSpacing: '0.3px',
+                whiteSpace: 'nowrap',
+              }}>
+                New Era University · Laboratory Room Usage System
+              </div>
           </div>
         </div>
 
