@@ -7,7 +7,14 @@ import AdminDashboard from './components/AdminDashboard'
 import QRCode from 'qrcode'
 
 export default function App() {
-  const [loading, setLoading] = useState(true)
+  // Start without loading screen if we have any cached profile
+  const [loading, setLoading] = useState(() => {
+    try {
+      const hasProfile = sessionStorage.getItem('cached_profile')
+      const hasQr = sessionStorage.getItem('qr_professor_profile')
+      return !hasProfile && !hasQr  // false = don't show loading screen
+    } catch { return true }
+  })
   const [profile, setProfile] = useState(null)
   const [error, setError] = useState('')
   const [viewAsProf, setViewAsProf] = useState(false)
