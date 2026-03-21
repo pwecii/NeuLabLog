@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Html5QrcodeScanner, Html5Qrcode } from 'html5-qrcode'
 
-export default function QrLoginBox({ onQrLogin, loading }) {
+export default function QrLoginBox({ onQrLogin, onScan, loading, scanLabel }) {
   const [showScanner, setShowScanner] = useState(false)
   const [scannerError, setScannerError] = useState('')
   const [uploading, setUploading] = useState(false)
@@ -42,7 +42,7 @@ export default function QrLoginBox({ onQrLogin, loading }) {
         async (decodedText) => {
           await safeClear(scannerRef.current)
           if (mounted) {
-            onQrLogin(decodedText.trim())
+            const val = decodedText.trim(); if (onScan) onScan(val); else if (onQrLogin) onQrLogin(val);
           }
         },
         () => {}
@@ -89,7 +89,7 @@ export default function QrLoginBox({ onQrLogin, loading }) {
       }
 
       const decodedText = await fileScannerRef.current.scanFile(file, true)
-      onQrLogin(decodedText.trim())
+      const val2 = decodedText.trim(); if (onScan) onScan(val2); else if (onQrLogin) onQrLogin(val2);
     } catch (err) {
       console.error('QR upload scan error:', err)
       setScannerError(
