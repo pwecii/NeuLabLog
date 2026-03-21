@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { formatDateTime } from '../utils/format'
 import backgroundImage from '../images/Background.png'
 import neuLogo from '../images/neu.png'
+import QRCode from 'qrcode'
 import {
   ResponsiveContainer,
   BarChart,
@@ -31,6 +32,7 @@ export default function AdminDashboard({ profile, onLogout, onSwitchView }) {
   const [removingRoom, setRemovingRoom] = useState(false)
 
   const [editingLog, setEditingLog] = useState(null)
+  const [viewingRoomQr, setViewingRoomQr] = useState(null)
   const [editForm, setEditForm] = useState({
     subject: '',
     room_number: '',
@@ -43,7 +45,7 @@ export default function AdminDashboard({ profile, onLogout, onSwitchView }) {
     try {
       const { data, error } = await supabase
         .from('rooms')
-        .select('*')
+        .select('id, room_number, qr_code, qr_code_png')
         .order('room_number', { ascending: true })
       if (error) throw error
       setRooms(data || [])
@@ -98,8 +100,18 @@ export default function AdminDashboard({ profile, onLogout, onSwitchView }) {
     try {
       const normalizedRoom = newRoom.trim().toUpperCase()
       if (!normalizedRoom) throw new Error('Please enter a room number.')
-      const { error } = await supabase.from('rooms').insert({ room_number: normalizedRoom })
-      if (error) throw error
+      // Generate unique QR value and PNG directly — no RPC needed
+      const qrValue = `NEU-ROOM-${normalizedRoom}-${Date.now()}`
+      const qrPng = await QRCode.toDataURL(qrValue, { width: 260, margin: 2 })
+      const { error } = await supabase.from('rooms').insert({
+        room_number: normalizedRoom,
+        qr_code: qrValue,
+        qr_code_png: qrPng,
+      })
+      if (error) {
+        if (error.code === '23505') throw new Error(`Room ${normalizedRoom} already exists.`)
+        throw error
+      }
       setNewRoom(''); await loadRooms()
     } catch (err) { setError(err.message || 'Failed to add room.')
     } finally { setSavingRoom(false) }
@@ -130,8 +142,11 @@ export default function AdminDashboard({ profile, onLogout, onSwitchView }) {
     return rooms.map((roomItem) => {
       const roomNumber = roomItem.room_number
       const activeLog = logs.find((log) => {
-        const start = new Date(log.start_time); const end = new Date(log.end_time)
-        return log.room_number === roomNumber && now >= start && now <= end
+        if (log.room_number !== roomNumber) return false
+        const start = new Date(log.start_time)
+        if (now < start) return false
+        if (!log.end_time) return true  // active session — no end time yet
+        return now <= new Date(log.end_time)
       })
       return {
         id: roomItem.id, room: roomNumber, occupied: !!activeLog,
@@ -235,7 +250,7 @@ export default function AdminDashboard({ profile, onLogout, onSwitchView }) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', width: '99.5vw', display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
+    <div style={{ minHeight: '100vh', width: '100vw', display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
 
       {/* ── TOP BANNER ── */}
       <div style={{
@@ -250,19 +265,19 @@ export default function AdminDashboard({ profile, onLogout, onSwitchView }) {
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: '8px',
-          minHeight: '60px',
+          minHeight: '56px',
         }}>
           {/* Left: logo + title */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', minWidth: 0, flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
             <img
               src={neuLogo}
               alt="NEU Logo"
-              style={{ height: '52px', width: '52px', objectFit: 'contain', flexShrink: 0 }}
+              style={{ height: '34px', width: '34px', objectFit: 'contain', flexShrink: 0 }}
             />
-            <div style={{ borderLeft: '1px solid rgba(255,255,255,0.25)', paddingLeft: '16px', minWidth: 0 }}>
+            <div style={{ borderLeft: '1px solid rgba(255,255,255,0.25)', paddingLeft: '8px', minWidth: 0 }}>
               <div style={{
                 fontFamily: "'Kelly Slab', cursive",
-                fontSize: 'clamp(16px, 3vw, 24px)',
+                fontSize: 'clamp(13px, 3.5vw, 22px)',
                 fontWeight: '600',
                 color: '#ffffff',
                 letterSpacing: '0.5px',
@@ -283,30 +298,27 @@ export default function AdminDashboard({ profile, onLogout, onSwitchView }) {
           </div>
 
           {/* Right: avatar + name (sm+) + buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-           {profile?.avatar_url ? (
-            <img src={profile.avatar_url} alt={profile.full_name}
-              style={{ height: '34px', width: '34px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #c9a84c', flexShrink: 0 }} />
-          ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
             <div style={{
-              height: '34px', width: '34px', borderRadius: '50%', background: '#c9a84c',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '14px', fontWeight: '700', color: '#0f2744', flexShrink: 0,
+              background: 'rgba(201,168,76,0.15)', border: '1.5px solid #c9a84c',
+              borderRadius: '50%', width: '30px', height: '30px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
             }}>
-              {profile?.full_name?.charAt(0)?.toUpperCase() || 'P'}
+              <span style={{ color: '#c9a84c', fontSize: '0.8rem', fontWeight: 700 }}>
+                {(profile.full_name || 'A')[0].toUpperCase()}
+              </span>
             </div>
-          )}
-            <div className="hidden sm:block" style={{ lineHeight: 1.3, marginRight: '4px' }}>
-              <div style={{ color: '#fff', fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap' }}>{profile.full_name}</div>
-              <div style={{ color: '#c9a84c', fontSize: '10px', whiteSpace: 'nowrap' }}>{profile.email}</div>
+            <div className="hidden sm:block" style={{ lineHeight: 1.3, marginRight: '2px' }}>
+              <div style={{ color: '#fff', fontSize: '0.72rem', fontWeight: 600, whiteSpace: 'nowrap' }}>{profile.full_name}</div>
+              <div style={{ color: '#c9a84c', fontSize: '0.62rem', whiteSpace: 'nowrap' }}>{profile.email}</div>
             </div>
             <button
               onClick={onSwitchView}
               style={{
                 background: 'rgba(201,168,76,0.2)', border: '1.5px solid #c9a84c',
                 borderRadius: '7px', color: '#c9a84c',
-                fontSize: 'clamp(0.65rem, 2vw, 0.8rem)', fontWeight: 600,
-                padding: '5px 10px', cursor: 'pointer', whiteSpace: 'nowrap',
+                fontSize: '0.72rem', fontWeight: 600,
+                padding: '5px 8px', cursor: 'pointer', whiteSpace: 'nowrap',
               }}
             >
               <span className="hidden sm:inline">Professor View</span>
@@ -411,9 +423,13 @@ export default function AdminDashboard({ profile, onLogout, onSwitchView }) {
               ) : rooms.length === 0 ? (
                 <p style={{ fontSize: '0.8rem', color: '#64748b' }}>No rooms added yet.</p>
               ) : rooms.map((room) => (
-                <span key={room.id} style={{ background: 'rgba(15,39,68,0.08)', border: '1px solid rgba(15,39,68,0.15)', borderRadius: '999px', padding: '3px 12px', fontSize: '0.8rem', fontWeight: 600, color: '#0f2744' }}>
-                  {room.room_number}
-                </span>
+                <button
+                  key={room.id}
+                  onClick={() => setViewingRoomQr(room)}
+                  style={{ background: 'rgba(15,39,68,0.08)', border: '1px solid rgba(15,39,68,0.15)', borderRadius: '999px', padding: '3px 12px', fontSize: '0.8rem', fontWeight: 600, color: '#0f2744', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+                >
+                  <span>🔲</span> {room.room_number}
+                </button>
               ))}
             </div>
           </div>
@@ -444,7 +460,8 @@ export default function AdminDashboard({ profile, onLogout, onSwitchView }) {
                     <div style={{ marginTop: '10px', fontSize: '0.75rem', color: '#374151', lineHeight: 1.6 }}>
                       <p><strong>Prof:</strong> {room.professor}</p>
                       <p><strong>Subject:</strong> {room.subject}</p>
-                      <p><strong>Until:</strong> {formatDateTime(room.end_time)}</p>
+                      <p><strong>Since:</strong> {formatDateTime(room.start_time)}</p>
+                      {room.end_time && <p><strong>Until:</strong> {formatDateTime(room.end_time)}</p>}
                       <button onClick={() => handleEndNow(room.logId)} style={{ marginTop: '8px', width: '100%', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '8px', padding: '6px 0', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>
                         End Now
                       </button>
@@ -589,6 +606,70 @@ export default function AdminDashboard({ profile, onLogout, onSwitchView }) {
 
         </div>{/* /maxWidth wrapper */}
       </div>{/* /background */}
+
+      {/* ── ROOM QR MODAL ── */}
+      {viewingRoomQr && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', padding: '16px' }}>
+          <div style={{ width: '100%', maxWidth: '340px', background: '#fff', borderRadius: '20px', padding: '24px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', textAlign: 'center' }}>
+            <div style={{ height: '4px', background: '#c9a84c', borderRadius: '4px', marginBottom: '18px' }} />
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f2744', marginBottom: '4px' }}>Room {viewingRoomQr.room_number}</h3>
+            <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '16px' }}>QR code for this laboratory room</p>
+            {viewingRoomQr.qr_code_png ? (
+              <img src={viewingRoomQr.qr_code_png} alt={`QR for ${viewingRoomQr.room_number}`}
+                style={{ width: '200px', height: '200px', border: '2px solid #0f2744', borderRadius: '12px', padding: '8px', margin: '0 auto 16px', display: 'block' }} />
+            ) : (
+              <div style={{ width: '200px', height: '200px', border: '2px dashed #d1d5db', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '0.8rem', color: '#94a3b8' }}>
+                No QR yet
+              </div>
+            )}
+            <p style={{ fontSize: '0.72rem', color: '#94a3b8', marginBottom: '16px', wordBreak: 'break-all' }}>{viewingRoomQr.qr_code}</p>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+              {viewingRoomQr.qr_code_png && (
+                <a href={viewingRoomQr.qr_code_png} download={`Room-${viewingRoomQr.room_number}-QR.png`}
+                  style={{ background: '#0f2744', color: '#c9a84c', borderRadius: '10px', padding: '9px 18px', fontSize: '0.85rem', fontWeight: 700, textDecoration: 'none' }}>
+                  Download
+                </a>
+              )}
+              <button onClick={() => setViewingRoomQr(null)}
+                style={{ background: 'transparent', border: '1.5px solid #d1d5db', borderRadius: '10px', padding: '9px 18px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', color: '#374151' }}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── ROOM QR MODAL ── */}
+      {viewingRoomQr && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', padding: '16px' }}>
+          <div style={{ width: '100%', maxWidth: '340px', background: '#fff', borderRadius: '20px', padding: '24px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', textAlign: 'center' }}>
+            <div style={{ height: '4px', background: '#c9a84c', borderRadius: '4px', marginBottom: '18px' }} />
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f2744', marginBottom: '4px' }}>Room {viewingRoomQr.room_number}</h3>
+            <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '16px' }}>QR code for this laboratory room</p>
+            {viewingRoomQr.qr_code_png ? (
+              <img src={viewingRoomQr.qr_code_png} alt={`QR for ${viewingRoomQr.room_number}`}
+                style={{ width: '200px', height: '200px', border: '2px solid #0f2744', borderRadius: '12px', padding: '8px', margin: '0 auto 16px', display: 'block' }} />
+            ) : (
+              <div style={{ width: '200px', height: '200px', border: '2px dashed #d1d5db', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '0.8rem', color: '#94a3b8' }}>
+                No QR yet
+              </div>
+            )}
+            <p style={{ fontSize: '0.72rem', color: '#94a3b8', marginBottom: '16px', wordBreak: 'break-all' }}>{viewingRoomQr.qr_code}</p>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+              {viewingRoomQr.qr_code_png && (
+                <a href={viewingRoomQr.qr_code_png} download={`Room-${viewingRoomQr.room_number}-QR.png`}
+                  style={{ background: '#0f2744', color: '#c9a84c', borderRadius: '10px', padding: '9px 18px', fontSize: '0.85rem', fontWeight: 700, textDecoration: 'none' }}>
+                  Download
+                </a>
+              )}
+              <button onClick={() => setViewingRoomQr(null)}
+                style={{ background: 'transparent', border: '1.5px solid #d1d5db', borderRadius: '10px', padding: '9px 18px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', color: '#374151' }}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── EDIT MODAL ── */}
       {editingLog && (
