@@ -8,14 +8,58 @@ import {
 import neuLogo from '../images/neu.png'
 import backgroundImage from '../images/Background.png'
 
+// ── Room QR Scanner component ────────────────────────────────
+function RoomQrScanner({ onScan, error }) {
+  const readerRef = React.useRef(null)
+
+  React.useEffect(() => {
+    let scanner = null
+
+    function startScanner() {
+      try {
+        scanner = new window.Html5Qrcode('room-qr-reader')
+        scanner.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 200, height: 200 } },
+          (decodedText) => { onScan(decodedText) },
+          () => {}
+        ).catch(() => {})
+      } catch {}
+    }
+
+    if (window.Html5Qrcode) {
+      startScanner()
+    } else {
+      const script = document.createElement('script')
+      script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js'
+      script.onload = startScanner
+      document.head.appendChild(script)
+    }
+
+    return () => {
+      if (scanner) scanner.stop().catch(() => {})
+    }
+  }, [])
+
+  return (
+    <div style={{ marginTop: '8px' }}>
+      <div id="room-qr-reader" ref={readerRef} style={{ width: '100%', borderRadius: '10px', overflow: 'hidden' }} />
+      {error && <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#dc2626', fontWeight: 600 }}>{error}</p>}
+      <p style={{ margin: '6px 0 0', fontSize: '11px', color: '#94a3b8', textAlign: 'center' }}>Point camera at the room QR code</p>
+    </div>
+  )
+}
+
+
+
+
 export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBackToAdmin }) {
   const [form, setForm] = useState({
     subject: '',
     room_number: '',
-    date: (() => { const n=new Date(); return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0') })(),
-    start_clock: '',
-    end_clock: '',
   })
+  const [showRoomScanner, setShowRoomScanner] = useState(false)
+  const [roomScanError, setRoomScanError] = useState('')
 
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
@@ -24,6 +68,8 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBack
   const [loadingLogs, setLoadingLogs] = useState(false)
   const [rooms, setRooms] = useState([])
   const [loadingRooms, setLoadingRooms] = useState(false)
+  const [activeSession, setActiveSession] = useState(null)
+  const [endingSession, setEndingSession] = useState(false)
 
   // Filter state
   const [filterPeriod, setFilterPeriod] = useState('daily')
@@ -48,6 +94,36 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBack
     }
   }
 
+  const checkActiveSession = async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_professor_logs_by_id', {
+        input_professor_id: profile.id,
+      })
+      if (error) throw error
+      const active = (data || []).find(log => !log.end_time)
+      setActiveSession(active || null)
+    } catch { setActiveSession(null) }
+  }
+
+  const handleEndSession = async () => {
+    if (!activeSession) return
+    setEndingSession(true)
+    try {
+      const { error } = await supabase
+        .from('usage_logs')
+        .update({ end_time: new Date().toISOString() })
+        .eq('id', activeSession.id)
+      if (error) throw error
+      setActiveSession(null)
+      setMessage('Session ended successfully.')
+      await loadMyLogs()
+    } catch (err) {
+      setError(err.message || 'Failed to end session.')
+    } finally {
+      setEndingSession(false)
+    }
+  }
+
   const loadRooms = async () => {
     setLoadingRooms(true)
     try {
@@ -68,26 +144,11 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBack
     if (profile?.id) {
       loadMyLogs()
       loadRooms()
+      checkActiveSession()
     }
   }, [profile?.id])
 
-  // Returns today as YYYY-MM-DD in LOCAL timezone (avoids UTC offset bugs)
-  const getLocalToday = () => {
-    const now = new Date()
-    const y = now.getFullYear()
-    const m = String(now.getMonth() + 1).padStart(2, '0')
-    const d = String(now.getDate()).padStart(2, '0')
-    return y + '-' + m + '-' + d
-  }
 
-  // Keep the date field always in sync with today's local date
-  React.useEffect(() => {
-    const updateDate = () => setForm((prev) => ({ ...prev, date: getLocalToday() }))
-    updateDate()
-    const interval = setInterval(updateDate, 60000)
-    window.addEventListener('focus', updateDate)
-    return () => { clearInterval(interval); window.removeEventListener('focus', updateDate) }
-  }, [])
   const filteredLogs = useMemo(() => {
     const now = new Date()
     const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate())
@@ -135,37 +196,23 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBack
     setMessage('')
 
     try {
-      if (!form.subject || !form.room_number || !form.date || !form.start_clock || !form.end_clock) {
-        throw new Error('Please complete all required fields.')
+      if (!form.subject || !form.room_number) {
+        throw new Error('Please enter a subject and select a room.')
+      }
+
+      if (activeSession) {
+        throw new Error(`You already have an active session in Room ${activeSession.room_number}. Please end it first.`)
       }
 
       const normalizedRoom = form.room_number.trim().toUpperCase()
-      const allowedRoomNumbers = rooms.map((room) => room.room_number)
-      if (!allowedRoomNumbers.includes(normalizedRoom)) {
-        throw new Error('Selected room is not valid.')
-      }
 
-      const start_time = new Date(`${form.date}T${form.start_clock}`)
-      const end_time = new Date(`${form.date}T${form.end_clock}`)
-
-      if (Number.isNaN(start_time.getTime()) || Number.isNaN(end_time.getTime())) {
-        throw new Error('Invalid date/time values.')
-      }
-      if (end_time <= start_time) {
-        throw new Error('End time must be later than start time.')
-      }
-
-      // ── CONFLICT CHECK + INSERT via SECURITY DEFINER RPC ──
-      // This works for both normal login and QR mode (no auth.uid session).
-      // The function checks for overlapping bookings atomically then inserts.
       const { data: rpcResult, error: rpcError } = await supabase.rpc('safe_insert_usage_log', {
         p_professor_id:    profile.id,
         p_professor_name:  profile.full_name,
         p_professor_email: profile.email,
         p_subject:         form.subject,
         p_room_number:     normalizedRoom,
-        p_start_time:      start_time.toISOString(),
-        p_end_time:        end_time.toISOString(),
+        p_start_time:      new Date().toISOString(),
       })
 
       if (rpcError) throw rpcError
@@ -173,9 +220,10 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBack
         throw new Error(rpcResult.error)
       }
 
-      setMessage(`Thank you for using Room ${normalizedRoom}`)
-      setForm({ subject: '', room_number: '', date: getLocalToday(), start_clock: '', end_clock: '' })
+      setMessage(`Session started in Room ${normalizedRoom}. Remember to end your session when done.`)
+      setForm({ subject: '', room_number: '' })
       await loadMyLogs()
+      await checkActiveSession()
     } catch (err) {
       setError(err.message || 'Failed to save usage log.')
     } finally {
@@ -195,7 +243,7 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBack
   ]
 
   return (
-    <div style={{ minHeight: '100vh', width: '99.5vw', display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
+    <div style={{ minHeight: '100vh', width: '100vw', display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
 
       {/* ── TOP BANNER ── */}
       <div
@@ -209,12 +257,11 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBack
           gap: '8px',
           minHeight: '60px',
           flexShrink: 0,
-          width: '100%',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <img src={neuLogo} alt="NEU Logo"
-            style={{ height: '52px', width: '52px', objectFit: 'contain', flexShrink: 1 }} />
+            style={{ height: '52px', width: '52px', objectFit: 'contain', flexShrink: 0 }} />
           <div style={{ borderLeft: '1px solid rgba(255,255,255,0.25)', paddingLeft: '16px' }}>
             <div style={{
               fontFamily: "'Kelly Slab', cursive",
@@ -223,14 +270,9 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBack
             }}>
               NEU LabLog
             </div>
-           <div className="hidden sm:block" style={{
-                fontSize: '10px',
-                color: '#c9a84c',
-                letterSpacing: '0.3px',
-                whiteSpace: 'nowrap',
-              }}>
-                New Era University · Laboratory Room Usage System
-              </div>
+            <div style={{ fontSize: '11px', color: '#c9a84c', letterSpacing: '0.5px', marginTop: '2px' }}>
+              New Era University · Laboratory Room Usage System
+            </div>
           </div>
         </div>
 
@@ -323,7 +365,21 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBack
                   </div>
                 )}
 
-                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                {/* ── ACTIVE SESSION BANNER ── */}
+                {activeSession && (
+                  <div style={{ background: '#fef9ec', border: '1.5px solid #c9a84c', borderLeft: '4px solid #c9a84c', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px' }}>
+                    <p style={{ margin: '0 0 4px', fontSize: '13px', fontWeight: 700, color: '#0f2744' }}>Active Session</p>
+                    <p style={{ margin: '0 0 2px', fontSize: '12px', color: '#475569' }}>Room: <strong>{activeSession.room_number}</strong></p>
+                    <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#475569' }}>Subject: <strong>{activeSession.subject}</strong></p>
+                    <p style={{ margin: '0 0 10px', fontSize: '11px', color: '#94a3b8' }}>Started: {new Date(activeSession.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                    <button onClick={handleEndSession} disabled={endingSession}
+                      style={{ width: '100%', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', opacity: endingSession ? 0.6 : 1 }}>
+                      {endingSession ? 'Ending...' : 'End Session'}
+                    </button>
+                  </div>
+                )}
+
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
                     <label className={labelClass}>Professor Name</label>
                     <input type="text" value={profile.full_name || ''} disabled
@@ -337,39 +393,65 @@ export default function ProfessorDashboard({ profile, isQrMode, onLogout, onBack
                   </div>
                   <div>
                     <label className={labelClass}>Room Number</label>
-                    <select value={form.room_number}
-                      onChange={(e) => handleChange('room_number', e.target.value)}
-                      className={inputClass}>
-                      <option value="">{loadingRooms ? 'Loading rooms...' : 'Select laboratory room'}</option>
-                      {rooms.map((room) => (
-                        <option key={room.id} value={room.room_number}>{room.room_number}</option>
-                      ))}
-                    </select>
+                    {/* Scan or manual toggle */}
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                      <button type="button"
+                        onClick={() => { setShowRoomScanner(!showRoomScanner); setRoomScanError('') }}
+                        style={{ flex: 1, background: showRoomScanner ? '#0f2744' : 'rgba(15,39,68,0.08)', color: showRoomScanner ? '#c9a84c' : '#0f2744', border: '1.5px solid #0f2744', borderRadius: '10px', padding: '8px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}>
+                        {showRoomScanner ? 'Hide Scanner' : 'Scan Room QR'}
+                      </button>
+                      <button type="button"
+                        onClick={() => setShowRoomScanner(false)}
+                        style={{ flex: 1, background: !showRoomScanner ? '#0f2744' : 'rgba(15,39,68,0.08)', color: !showRoomScanner ? '#c9a84c' : '#0f2744', border: '1.5px solid #0f2744', borderRadius: '10px', padding: '8px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}>
+                        Manual Select
+                      </button>
+                    </div>
+
+                    {showRoomScanner ? (
+                      <RoomQrScanner
+                        onScan={async (qrValue) => {
+                          setRoomScanError('')
+                          try {
+                            const { data, error } = await supabase.rpc('find_room_by_qr', { input_qr: qrValue.trim() })
+                            if (error) throw error
+                            if (!data || data.length === 0) throw new Error('Room QR not recognized.')
+                            handleChange('room_number', data[0].room_number)
+                            setShowRoomScanner(false)
+                          } catch (err) {
+                            setRoomScanError(err.message)
+                          }
+                        }}
+                        error={roomScanError}
+                      />
+                    ) : (
+                      <select value={form.room_number}
+                        onChange={(e) => handleChange('room_number', e.target.value)}
+                        className={inputClass}>
+                        <option value="">{loadingRooms ? 'Loading rooms...' : 'Select laboratory room'}</option>
+                        {rooms.map((room) => (
+                          <option key={room.id} value={room.room_number}>{room.room_number}</option>
+                        ))}
+                      </select>
+                    )}
+                    {form.room_number && !showRoomScanner && (
+                      <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#16a34a', fontWeight: 600 }}>
+                        Selected: {form.room_number}
+                      </p>
+                    )}
+                    {form.room_number && showRoomScanner && (
+                      <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#16a34a', fontWeight: 600 }}>
+                        Scanned: {form.room_number} ✓
+                      </p>
+                    )}
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: '8px' }}>
-                    <div>
-                      <label className={labelClass}>Date</label>
-                      <input type="date" value={form.date}
-                        onChange={(e) => handleChange('date', e.target.value)} className={inputClass} />
-                    </div>
-                    <div>
-                      <label className={labelClass}>Start Time</label>
-                      <input type="time" value={form.start_clock}
-                        onChange={(e) => handleChange('start_clock', e.target.value)} className={inputClass} />
-                    </div>
-                    <div>
-                      <label className={labelClass}>End Time</label>
-                      <input type="time" value={form.end_clock}
-                        onChange={(e) => handleChange('end_clock', e.target.value)} className={inputClass} />
-                    </div>
-                  </div>
-                  <button type="submit" disabled={saving}
+
+                  <button type="submit" disabled={saving || !!activeSession}
                     style={{
-                      width: '100%', background: '#0f2744', color: '#fff', border: 'none',
+                      width: '100%', background: activeSession ? '#94a3b8' : '#0f2744', color: '#fff', border: 'none',
                       borderRadius: '12px', padding: '14px 16px', fontSize: '15px',
-                      fontWeight: '600', cursor: 'pointer', opacity: saving ? 0.6 : 1,
+                      fontWeight: '600', cursor: activeSession ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1,
                     }}>
-                    {saving ? 'Saving...' : 'Save Usage Log'}
+                    {saving ? 'Starting...' : activeSession ? 'End current session first' : 'Start Session'}
                   </button>
                 </form>
               </div>
