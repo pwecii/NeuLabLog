@@ -73,66 +73,107 @@ export default function App() {
   }
 
   useEffect(() => {
-    // The ONLY way we handle auth — listen to onAuthStateChange.
-    // On page load Supabase fires INITIAL_SESSION with the stored session
-    // (or null if logged out). This is more reliable than getSession()
-    // because it's guaranteed to fire exactly once before any other event.
+    let mounted = true
 
+    // Wraps any promise with a timeout — rejects if it takes too long
+    const withTimeout = (promise, ms) =>
+      Promise.race([
+        promise,
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Connection is slow. Please reload.')), ms)
+        )
+      ])
+
+    const loadProfile = async (user) => {
+      if (!mounted) return
+      try {
+        if (!isNeuEmail(user.email)) {
+          await supabase.auth.signOut()
+          if (mounted) setError('Only @neu.edu.ph institutional emails are allowed.')
+          return
+        }
+        // Hard 6-second timeout on profile fetch — never hangs forever
+        const p = await withTimeout(buildOrFetchProfile(user), 15000)
+        if (mounted) {
+          setProfile(p)
+          setError('')
+          // Cache profile so reload is instant
+          try { sessionStorage.setItem('cached_profile', JSON.stringify(p)) } catch {}
+        }
+      } catch (err) {
+        console.error('Profile load error:', err)
+        if (mounted) { setError(err.message || 'Failed to load profile. Please reload.'); setProfile(null) }
+      }
+    }
+
+    // ── STEP 1: Show cached profile instantly, then verify session in background
+    const cachedProfile = (() => {
+      try { return JSON.parse(sessionStorage.getItem('cached_profile') || 'null') } catch { return null }
+    })()
+    if (cachedProfile) {
+      // Show dashboard immediately from cache — no loading screen
+      setProfile(cachedProfile)
+      setLoading(false)
+    }
+
+    const init = async () => {
+      try {
+        const { data } = await supabase.auth.getSession()
+        if (!mounted) return
+        if (data.session?.user) {
+          // If we had a cached profile, update silently in background
+          if (cachedProfile) {
+            buildOrFetchProfile(data.session.user)
+              .then(p => { if (mounted) { setProfile(p); try { sessionStorage.setItem('cached_profile', JSON.stringify(p)) } catch {} } })
+              .catch(() => {})
+          } else {
+            await loadProfile(data.session.user)
+          }
+        } else {
+          // No session — clear cache and show login
+          try { sessionStorage.removeItem('cached_profile') } catch {}
+          if (mounted) setProfile(null)
+        }
+      } catch (err) {
+        console.error('Session fetch error:', err)
+      } finally {
+        if (mounted && !cachedProfile) setLoading(false)
+      }
+    }
+
+    init()
+
+    // ── STEP 2: Listen for auth changes (new login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('AUTH EVENT:', event, session?.user?.email)
+        if (!mounted) return
+        console.log('AUTH EVENT:', event)
 
-        // Ignore token refreshes — no need to re-fetch profile
         if (event === 'TOKEN_REFRESHED') return
 
-        // SIGNED_OUT — clear everything
         if (event === 'SIGNED_OUT') {
           sessionStorage.removeItem('qr_professor_profile')
+          sessionStorage.removeItem('cached_profile')
           setProfile(null)
           setQrProfessorProfile(null)
           setLoading(false)
           return
         }
 
-        // INITIAL_SESSION fires on every page load with the persisted session.
-        // SIGNED_IN fires after OAuth redirect (fresh login).
-        // Both cases: if there's a user, load their profile.
-        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
-          if (!session?.user) {
-            // No session → show login
-            setProfile(null)
-            setLoading(false)
-            return
-          }
-
-          try {
-            if (!isNeuEmail(session.user.email)) {
-              await supabase.auth.signOut()
-              setError('Only @neu.edu.ph institutional emails are allowed.')
-              setProfile(null)
-              setLoading(false)
-              return
-            }
-
-            const p = await buildOrFetchProfile(session.user)
-            setProfile(p)
-            setError('')
-          } catch (err) {
-            console.error('Profile load error:', err)
-            setError(err.message || 'Failed to load profile.')
-            setProfile(null)
-          } finally {
-            setLoading(false)
-          }
-          return
+        // Only act on SIGNED_IN after init() has already finished
+        // (INITIAL_SESSION is handled by getSession() above)
+        if (event === 'SIGNED_IN' && session?.user) {
+          setLoading(true)
+          await loadProfile(session.user)
+          if (mounted) setLoading(false)
         }
-
-        // Any other event — just stop loading
-        setLoading(false)
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   // ── IDLE TIMEOUT: auto-logout after 5 minutes of inactivity ──
